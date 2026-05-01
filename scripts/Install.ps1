@@ -89,6 +89,9 @@ if ($DllYolu -ne "" -and (Test-Path $DllYolu)) {
             Copy-Item "$geciciDizin\YanginTesisat.dll" "$hedefDizin\YanginTesisat.dll" -Force
         }
 
+        # MotW (İnternet güvenlik kilidi) kaldır - AutoCAD'in donmasını engeller
+        Get-ChildItem -Path $bundleKok -Recurse -File | Unblock-File -ErrorAction SilentlyContinue
+
         Remove-Item $geciciZip -Force -ErrorAction SilentlyContinue
         Remove-Item $geciciDizin -Recurse -Force -ErrorAction SilentlyContinue
 
