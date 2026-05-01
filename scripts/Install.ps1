@@ -44,7 +44,7 @@ if ($DllYolu -ne "" -and (Test-Path $DllYolu)) {
         $zipUrl  = ($release.assets | Where-Object { $_.name -like "*.zip" } | Select-Object -First 1).browser_download_url
         if (-not $zipUrl) { throw "Release ZIP bulunamadi." }
 
-        $geciciZip  = "$env:TEMP\YanginTesisat.zip"
+        $geciciZip   = "$env:TEMP\YanginTesisat.zip"
         $geciciDizin = "$env:TEMP\YanginTesisat_kur"
 
         Invoke-WebRequest -Uri $zipUrl -OutFile $geciciZip -UseBasicParsing
@@ -68,16 +68,10 @@ if ($DllYolu -ne "" -and (Test-Path $DllYolu)) {
 }
 
 # ─── Windows güvenlik kilidini kaldır (MotW) ─────────────────────────────
-Yaz "Guvenlik kilitleri kaldiriliyor..." "Yellow"
-Get-ChildItem -Path $bundleKok -Recurse -File | ForEach-Object {
-    Unblock-File -Path $_.FullName -ErrorAction SilentlyContinue
-    # Stream:Zone.Identifier'ı da doğrudan sil
-    $zoneFile = "$($_.FullName):Zone.Identifier"
-    Remove-Item $zoneFile -ErrorAction SilentlyContinue
-}
-Yaz "Guvenlik kilitleri kaldirildi." "Green"
+Get-ChildItem -Path $bundleKok -Recurse -File |
+    ForEach-Object { Unblock-File -Path $_.FullName -ErrorAction SilentlyContinue }
 
-# ─── PackageContents.xml'i her zaman taze yaz ───────────────────────────
+# ─── PackageContents.xml yaz ─────────────────────────────────────────────
 $xml = @'
 <?xml version="1.0" encoding="utf-8"?>
 <ApplicationPackage SchemaVersion="1.0" Version="1.0.0"
@@ -95,47 +89,18 @@ $xml = @'
 '@
 Set-Content -Path "$bundleKok\PackageContents.xml" -Value $xml -Encoding UTF8 -NoNewline
 
-# ─── AutoCAD Güvenlik Ayarları (SECURELOAD + TrustedPaths) ──────────────
-Yaz "AutoCAD guvenlik ayarlari yapilandiriliyor..." "Yellow"
-
-# SECURELOAD = 0 → tüm eklentilere izin ver (AutoCAD kayıt yollarında)
-$acadRegKokler = @(
-    "HKCU:\Software\Autodesk\AutoCAD",
-    "HKLM:\SOFTWARE\Autodesk\AutoCAD"
-)
-foreach ($kok in $acadRegKokler) {
-    if (Test-Path $kok) {
-        Get-ChildItem $kok -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
-            $yol = $_.PSPath
-            # General2 key'ini bul - SECURELOAD ve TRUSTEDPATHS burada
-            if ($yol -like "*General2*") {
-                try {
-                    Set-ItemProperty -Path $yol -Name "SECURELOAD" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-                    $mevcutTrusted = (Get-ItemProperty -Path $yol -Name "TRUSTEDPATHS" -ErrorAction SilentlyContinue).TRUSTEDPATHS
-                    if ($mevcutTrusted -notlike "*YanginTesisat*") {
-                        $yeniTrusted = "$bundleKok\Contents\Win64;$mevcutTrusted"
-                        Set-ItemProperty -Path $yol -Name "TRUSTEDPATHS" -Value $yeniTrusted -ErrorAction SilentlyContinue
-                    }
-                } catch {}
-            }
-        }
-    }
-}
-Yaz "AutoCAD guvenlik ayarlari tamamlandi." "Green"
-
 # ─── Doğrulama ───────────────────────────────────────────────────────────
 if (-not (Test-Path "$hedefDizin\YanginTesisat.dll")) {
-    Yaz "HATA: DLL bulunamadi!" "Red"
-    exit 1
+    Yaz "HATA: DLL bulunamadi!" "Red"; exit 1
 }
 
-$dllBilgi = Get-Item "$hedefDizin\YanginTesisat.dll"
+$boyut = [math]::Round((Get-Item "$hedefDizin\YanginTesisat.dll").Length / 1KB, 1)
 Yaz ""
 Yaz "=================================================" "Green"
 Yaz "  KURULUM TAMAMLANDI!" "Green"
 Yaz "=================================================" "Green"
 Yaz ""
-Yaz "  DLL Boyutu : $([math]::Round($dllBilgi.Length / 1KB, 1)) KB" "White"
+Yaz "  DLL Boyutu : $boyut KB" "White"
 Yaz "  Konum      : $hedefDizin" "White"
 Yaz ""
 Yaz "  AutoCAD'i yeniden baslatın." "Yellow"
