@@ -89,6 +89,38 @@ $xml = @'
 '@
 Set-Content -Path "$bundleKok\PackageContents.xml" -Value $xml -Encoding UTF8 -NoNewline
 
+# ─── AutoCAD TRUSTEDPATHS ayarla (her profil için) ───────────────────────
+Yaz "AutoCAD guvenli yol ayarlaniyor..." "Yellow"
+$bundleUst = "$env:APPDATA\Autodesk\ApplicationPlugins\"
+$acadBase  = "HKCU:\SOFTWARE\Autodesk\AutoCAD"
+
+try {
+    if (Test-Path $acadBase) {
+        Get-ChildItem $acadBase | ForEach-Object {
+            $verKey = $_.PSPath
+            Get-ChildItem $verKey -ErrorAction SilentlyContinue | ForEach-Object {
+                $prodKey = $_.PSPath
+                $profilesPath = "$prodKey\Profiles"
+                if (Test-Path $profilesPath) {
+                    Get-ChildItem $profilesPath -ErrorAction SilentlyContinue | ForEach-Object {
+                        $generalPath = "$($_.PSPath)\General"
+                        if (Test-Path $generalPath) {
+                            $mevcut = (Get-ItemProperty $generalPath -Name "TRUSTEDPATHS" -ErrorAction SilentlyContinue).TRUSTEDPATHS
+                            if ($mevcut -notlike "*$bundleUst*") {
+                                $yeni = if ($mevcut) { "$mevcut;$bundleUst" } else { $bundleUst }
+                                Set-ItemProperty $generalPath -Name "TRUSTEDPATHS" -Value $yeni -ErrorAction SilentlyContinue
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Yaz "TRUSTEDPATHS ayarlandi." "Green"
+    }
+} catch {
+    Yaz "TRUSTEDPATHS ayarlanamadi (manuel ayarlanacak): $_" "Yellow"
+}
+
 # ─── Doğrulama ───────────────────────────────────────────────────────────
 if (-not (Test-Path "$hedefDizin\YanginTesisat.dll")) {
     Yaz "HATA: DLL bulunamadi!" "Red"; exit 1
@@ -103,7 +135,7 @@ Yaz ""
 Yaz "  DLL Boyutu : $boyut KB" "White"
 Yaz "  Konum      : $hedefDizin" "White"
 Yaz ""
-Yaz "  Lutfen AutoCAD'i baslatin." "Yellow"
-Yaz "  Guvenlik uyarisi cikarsa 'Always Load' (Her Zaman Yukle) secin." "Yellow"
+Yaz "  AutoCAD'i bastan baslatinca plugin otomatik yuklenir." "Yellow"
+Yaz "  Ilk acilista 'Always Load' secin — bir daha sormaz." "Yellow"
 Yaz "  Komutlar: YTSPRINKLER  YTCAPLA  YTSISTEM  YTMETRAJ" "Cyan"
 Yaz ""
