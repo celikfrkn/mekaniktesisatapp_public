@@ -89,25 +89,7 @@ $xml = @'
 '@
 Set-Content -Path "$bundleKok\PackageContents.xml" -Value $xml -Encoding UTF8 -NoNewline
 
-# ─── AutoCAD TrustedPaths'e ekle (SECURELOAD=1 ile sessiz yükleme) ───────
-try {
-    $dllKlasoru = $hedefDizin
-    $acadReg = "HKCU:\Software\Autodesk\AutoCAD"
-    if (Test-Path $acadReg) {
-        Get-ChildItem $acadReg -Recurse -ErrorAction SilentlyContinue |
-        Where-Object { $_.PSPath -like "*General2*" } |
-        ForEach-Object {
-            $mevcut = (Get-ItemProperty $_.PSPath -Name "TRUSTEDPATHS" -ErrorAction SilentlyContinue).TRUSTEDPATHS
-            if ($mevcut -notlike "*YanginTesisat*") {
-                $yeni = if ($mevcut) { "$dllKlasoru;$mevcut" } else { $dllKlasoru }
-                Set-ItemProperty $_.PSPath -Name "TRUSTEDPATHS" -Value $yeni -ErrorAction SilentlyContinue
-            }
-        }
-    }
-    Yaz "Guvenli yol eklendi: $dllKlasoru" "Green"
-} catch {}
-
-
+# ─── Doğrulama ───────────────────────────────────────────────────────────
 if (-not (Test-Path "$hedefDizin\YanginTesisat.dll")) {
     Yaz "HATA: DLL bulunamadi!" "Red"; exit 1
 }
@@ -121,6 +103,7 @@ Yaz ""
 Yaz "  DLL Boyutu : $boyut KB" "White"
 Yaz "  Konum      : $hedefDizin" "White"
 Yaz ""
-Yaz "  AutoCAD'i yeniden baslatın." "Yellow"
+Yaz "  Lutfen AutoCAD'i baslatin." "Yellow"
+Yaz "  Guvenlik uyarisi cikarsa 'Always Load' (Her Zaman Yukle) secin." "Yellow"
 Yaz "  Komutlar: YTSPRINKLER  YTCAPLA  YTSISTEM  YTMETRAJ" "Cyan"
 Yaz ""
